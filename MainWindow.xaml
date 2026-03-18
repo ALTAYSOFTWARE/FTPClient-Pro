@@ -1,0 +1,798 @@
+<Window x:Class="MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:FTPClient"
+        Title="FTP Client Pro" Height="750" Width="1100"
+        MinHeight="650" MinWidth="950"
+        Background="{DynamicResource BgDeepBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="Segoe UI"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <local:StringToBrushConverter x:Key="StringToBrush"/>
+            <local:BoolToVisibilityConverter x:Key="BoolToVis"/>
+            <local:TransferDirectionToColorConverter x:Key="DirToColor"/>
+            <local:TransferActiveToVisibilityConverter x:Key="ActiveToVis"/>
+            <local:DirectoryForegroundConverter x:Key="DirFg"/>
+            <local:BoolToFontWeightConverter x:Key="BoolToFW"/>
+
+            <Style x:Key="PathBoxStyle" TargetType="{x:Type TextBox}">
+                <Setter Property="FontFamily" Value="Consolas"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Background" Value="{DynamicResource BgSecondaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="Padding" Value="4,2"/>
+            </Style>
+
+            <Style x:Key="ModernToolbarButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="Padding" Value="12,6"/>
+                <Setter Property="Margin" Value="2,0"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource BgHoverBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource SelectBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.4"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="ModernDriveComboStyle" TargetType="{x:Type ComboBox}">
+                <Setter Property="Background" Value="{DynamicResource BgSecondaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ComboBox}">
+                            <Grid>
+                                <ToggleButton x:Name="ToggleButton" 
+                                              BorderBrush="{TemplateBinding BorderBrush}" 
+                                              Background="{TemplateBinding Background}" 
+                                              Focusable="false" 
+                                              IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                                              ClickMode="Press">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                            <Border x:Name="Border" CornerRadius="4" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="30"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="1" Background="Transparent">
+                                                        <Path x:Name="Arrow" Fill="{DynamicResource TextSecBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource BgHoverBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" 
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" Margin="10,3,30,3" 
+                                                  VerticalAlignment="Center" HorizontalAlignment="Left">
+                                    <ContentPresenter.Resources>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                        </Style>
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                                <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                    <Grid x:Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                        <Border x:Name="DropDownBorder" Background="{DynamicResource BgSecondaryBrush}" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" CornerRadius="4"/>
+                                        <ScrollViewer Margin="0,4" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Grid>
+                                </Popup>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="ThemeAwareComboBoxStyle" TargetType="{x:Type ComboBox}">
+                <Setter Property="Background" Value="{DynamicResource BgSecondaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="6,3"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ComboBox}">
+                            <Grid>
+                                <ToggleButton x:Name="ToggleButton" 
+                                              BorderBrush="{TemplateBinding BorderBrush}" 
+                                              Background="{TemplateBinding Background}" 
+                                              Focusable="false" 
+                                              IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                                              ClickMode="Press"/>
+                                <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False" 
+                                                  Content="{TemplateBinding SelectionBoxItem}" 
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" 
+                                                  Margin="8,3,23,3" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                <Path x:Name="Arrow" Fill="{DynamicResource TextSecBrush}" 
+                                      HorizontalAlignment="Right" VerticalAlignment="Center" 
+                                      Margin="0,0,8,0" Data="M 0 0 L 4 4 L 8 0 Z" IsHitTestVisible="False"/>
+                                <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                    <Grid x:Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                        <Border x:Name="DropDownBorder" Background="{DynamicResource BgSecondaryBrush}" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"/>
+                                        <ScrollViewer Margin="0,2" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Grid>
+                                </Popup>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style TargetType="{x:Type ComboBoxItem}">
+                <Setter Property="Padding" Value="8,5"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                            <Border x:Name="gd" Background="{TemplateBinding Background}" CornerRadius="2" Margin="4,1">
+                                <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="gd" Property="Background" Value="{DynamicResource BgHoverBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="gd" Property="Background" Value="{DynamicResource SelectBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="{x:Type Menu}">
+                <Setter Property="Background" Value="{DynamicResource BgDeepBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="Padding" Value="4,2"/>
+            </Style>
+
+            <Style TargetType="{x:Type ContextMenu}">
+                <Setter Property="Background" Value="{DynamicResource BgSecondaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="2"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ContextMenu}">
+                            <Border Background="{TemplateBinding Background}" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                    CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                <ItemsPresenter/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="{x:Type MenuItem}">
+                <Setter Property="Background" Value="{DynamicResource BgSecondaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="10,6,20,6"/>
+                <Style.Triggers>
+                    <Trigger Property="Role" Value="TopLevelHeader">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Padding" Value="8,4"/>
+                    </Trigger>
+
+                    <Trigger Property="IsHighlighted" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource SelectBrush}"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Opacity" Value="0.4"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style TargetType="{x:Type Separator}" BasedOn="{StaticResource {x:Type Separator}}">
+                <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="Margin" Value="2,4"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Cursor="">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition x:Name="rowLog" Height="1.2*"/>
+            <RowDefinition x:Name="rowLogSplitter" Height="5"/>
+            <RowDefinition Height="6*"/>
+            <RowDefinition x:Name="rowTransferSplitter" Height="5"/>
+            <RowDefinition x:Name="rowTransfer" Height="2*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Menu Grid.Row="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <MenuItem Header="Dosya">
+                <MenuItem Header="Site Yoneticisi" x:Name="mnuSiteManager" Click="mnuSiteManager_Click"/>
+                <Separator/>
+                <MenuItem Header="Baglan" x:Name="mnuConnect" Click="mnuConnect_Click"/>
+                <MenuItem Header="Baglantıyı Kes" x:Name="mnuDisconnect" Click="mnuDisconnect_Click" IsEnabled="False"/>
+                <Separator/>
+                <MenuItem Header="Cikis" Click="mnuExit_Click"/>
+            </MenuItem>
+            <MenuItem Header="Transfer">
+                <MenuItem Header="Secilenleri Yukle (F8)" Click="mnuUpload_Click"/>
+                <MenuItem Header="Secilenleri Indir (F7)" Click="mnuDownload_Click"/>
+                <Separator/>
+                <MenuItem Header="Tum Transferleri Iptal" Click="mnuCancelAll_Click"/>
+                <MenuItem Header="Kuyruğu Temizle" Click="mnuClearQueue_Click"/>
+            </MenuItem>
+            <MenuItem Header="Sunucu">
+                <MenuItem Header="Yenile (F5)" Click="mnuRefresh_Click"/>
+                <MenuItem Header="Yeni Klasor" Click="mnuMkdir_Click"/>
+            </MenuItem>
+            <MenuItem Header="Gorunum">
+                <MenuItem Header="Mesaj Günlüğü" x:Name="mnuShowLog" IsCheckable="True" IsChecked="True"
+                          Checked="mnuShowLog_Changed" Unchecked="mnuShowLog_Changed"/>
+                <MenuItem Header="Transfer Kuyruğu" x:Name="mnuShowTransfer" IsCheckable="True" IsChecked="True"
+                          Checked="mnuShowTransfer_Changed" Unchecked="mnuShowTransfer_Changed"/>
+            </MenuItem>
+            <MenuItem Header="Yardım">
+                <MenuItem Header="Hakkında" Click="mnuAbout_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <Border Grid.Row="1" Background="{DynamicResource BgPrimaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource ModernToolbarButtonStyle}" Click="btnSiteManager_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🌍" Margin="0,0,6,0" Foreground="{DynamicResource AccentDarkBrush}"/>
+                        <TextBlock Text="Site Yöneticisi" FontWeight="SemiBold" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <Separator Width="1" Height="24" Margin="4,0" Background="{DynamicResource BorderBrush}"/>
+                <Button x:Name="btnConnect" Style="{StaticResource ModernToolbarButtonStyle}" Click="btnConnect_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⚡" Margin="0,0,6,0" Foreground="{DynamicResource AccentBrush}"/>
+                        <TextBlock Text="Bağlan" FontWeight="SemiBold" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="btnDisconnect" Style="{StaticResource ModernToolbarButtonStyle}" Click="btnDisconnect_Click" IsEnabled="False">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="❌" Margin="0,0,6,0" Foreground="{DynamicResource ErrorBrush}"/>
+                        <TextBlock Text="Kes" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource ErrorBrush}"/>
+                    </StackPanel>
+                </Button>
+                <Separator Width="1" Height="24" Margin="4,0" Background="{DynamicResource BorderBrush}"/>
+                <Button x:Name="btnRefresh" Style="{StaticResource ModernToolbarButtonStyle}" Click="btnRefresh_Click" IsEnabled="False" ToolTip="F5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔄" Margin="0,0,6,0" Foreground="{DynamicResource TextSecBrush}"/>
+                        <TextBlock Text="Yenile" FontWeight="SemiBold" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="btnCompare" Style="{StaticResource ModernToolbarButtonStyle}" Click="btnCompare_Click" IsEnabled="False">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔍" Margin="0,0,5,0"/>
+                        <TextBlock Text="Karşılaştır" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+                <Separator Width="1" Height="24" Margin="4,0" Background="{DynamicResource BorderBrush}"/>
+                <Button x:Name="btnTheme" Style="{StaticResource ModernToolbarButtonStyle}" Click="btnTheme_Click">
+                    <TextBlock x:Name="lblTheme" Text="☀ Açık Mod" FontWeight="SemiBold" FontSize="12"/>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="90"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <Button x:Name="btnHistory" Content="🕒" 
+                    Style="{StaticResource ModernToolbarButtonStyle}" 
+                    Padding="5,2" Margin="0,0,5,0"
+                    ToolTip="Son Bağlantılar" Click="btnHistory_Click">
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="cmHistory">
+                                <MenuItem Header="Geçmiş Temiz" IsEnabled="False"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <TextBlock Text="Sunucu:" Foreground="{DynamicResource TextSecBrush}" VerticalAlignment="Center" FontSize="11"/>
+                </StackPanel>
+
+                <TextBox Grid.Column="1" x:Name="txtHost" KeyDown="QuickConnect_KeyDown" TextChanged="txtHost_TextChanged"/>
+
+                <TextBlock Grid.Column="2" Text="Kullanici:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecBrush}" Margin="8,0,6,0" FontSize="11"/>
+                <TextBox Grid.Column="3" x:Name="txtUsername" KeyDown="QuickConnect_KeyDown"/>
+
+                <TextBlock Grid.Column="4" Text="Sifre:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecBrush}" Margin="8,0,6,0" FontSize="11"/>
+                <PasswordBox Grid.Column="5" x:Name="txtPassword" KeyDown="QuickConnectPwd_KeyDown"/>
+
+                <TextBlock Grid.Column="6" Text="Port:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecBrush}" Margin="8,0,6,0" FontSize="11"/>
+                <TextBox Grid.Column="7" x:Name="txtPort" Text="21" KeyDown="QuickConnect_KeyDown"/>
+
+                <Button Grid.Column="9" Content="Bağlan" Style="{StaticResource AccentButtonStyle}" Click="btnQuickConnect_Click" Margin="8,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="3" x:Name="gridLog" Background="{DynamicResource BgPrimaryBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,3">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Mesaj Günlüğü" FontWeight="SemiBold" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="6,0,15,0"/>
+                    <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="8,2" Click="btnClearLog_Click">
+                        <TextBlock Text="Temizle" FontSize="11"/>
+                    </Button>
+                    <CheckBox x:Name="chkAutoScroll" IsChecked="True" VerticalAlignment="Center" Margin="8,0" Foreground="{DynamicResource TextSecBrush}" FontSize="11">
+                        Oto Kaydır
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+            <ListBox Grid.Row="1" x:Name="lstLog" BorderThickness="0" Background="{DynamicResource BgDeepBrush}" FontFamily="Consolas" FontSize="12" Padding="4">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                            <TextBlock Text="{Binding TimeDisplay}" Foreground="{DynamicResource TextSecBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Prefix}" Foreground="{Binding LevelColor, Converter={StaticResource StringToBrush}}" Margin="0,0,6,0" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Message}" Foreground="{Binding LevelColor, Converter={StaticResource StringToBrush}}" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <GridSplitter Grid.Row="4" x:Name="splitLog" Height="5" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}"/>
+
+        <Grid Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Style="{StaticResource PanelHeaderStyle}">
+                        <DockPanel>
+                            <TextBlock Text="Yerel Sistem" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="8,4" Click="btnLocalParent_Click" ToolTip="Üst Klasör">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE752;" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                </Button>
+                                <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="8,4" Click="btnLocalRefresh_Click" ToolTip="Yenile">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE149;" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                </Button>
+                                <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="8,4" Click="btnLocalMkdir_Click" ToolTip="Yeni Klasör">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8F4;" FontSize="14" Foreground="#00C896" FontWeight="Bold"/>
+                                </Button>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="6,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" x:Name="cmbLocalDrives" Margin="0,0,6,0" Style="{StaticResource ModernDriveComboStyle}" SelectionChanged="cmbLocalDrives_SelectionChanged">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Icon}" Margin="0,0,10,0" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBox Grid.Column="1" x:Name="txtLocalSearch" Style="{StaticResource PathBoxStyle}" TextChanged="txtLocalSearch_TextChanged" ToolTip="Yerel dosyalarda ara..."/>
+                    </Grid>
+
+                    <DataGrid Grid.Row="2" x:Name="dgLocalFiles" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" MouseDoubleClick="dgLocalFiles_MouseDoubleClick" KeyDown="dgLocalFiles_KeyDown" PreviewKeyDown="dgLocalFiles_PreviewKeyDown" ContextMenuOpening="dgLocalFiles_ContextMenuOpening">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Düzenle" x:Name="ctxLocalEdit" Click="ctxLocalEdit_Click" FontWeight="SemiBold"/>
+                                <Separator/>
+                                <MenuItem Header="Yükle" x:Name="ctxLocalUpload" Click="ctxLocalUpload_Click" FontWeight="SemiBold"/>
+                                <Separator/>
+                                <MenuItem Header="Yeniden Adlandır" x:Name="ctxLocalRename" Click="ctxLocalRename_Click"/>
+                                <MenuItem Header="Sil" x:Name="ctxLocalDelete" Click="ctxLocalDelete_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Yeni Klasör" Click="btnLocalMkdir_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Özellikler" x:Name="ctxLocalProps" Click="ctxLocalProps_Click"/>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Ad" Width="*" SortMemberPath="Name">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding IconText}" Margin="2,0,5,0" VerticalAlignment="Center" FontSize="13"/>
+                                            <TextBlock Text="{Binding Name}" Margin="4,0" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Boyut" Binding="{Binding SizeDisplay}" Width="80">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecBrush}"/>
+                                        <Setter Property="Margin" Value="5,0,0,0"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Tur" Binding="{Binding TypeDisplay}" Width="90"/>
+                            <DataGridTextColumn Header="Tarih" Binding="{Binding LastModifiedDisplay}" Width="120"/>
+                        </DataGrid.Columns>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ComparisonStatus}" Value="Missing">
+                                        <Setter Property="Background" Value="#44FF0000"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ComparisonStatus}" Value="Different">
+                                        <Setter Property="Background" Value="#44FFFF00"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    </DataGrid>
+                    <Border Grid.Row="3" Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,4">
+                        <TextBlock x:Name="lblLocalInfo" Text="0 oge" Foreground="{DynamicResource TextSecBrush}" FontSize="10"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}"/>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Style="{StaticResource PanelHeaderStyle}">
+                    <DockPanel>
+                        <TextBlock x:Name="lblRemoteHeader" Text="Uzak Sistem [Bagli Degil]" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        <Ellipse x:Name="ellConn" Width="8" Height="8" Margin="8,0,0,0" Fill="{DynamicResource ErrorBrush}" VerticalAlignment="Center"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="btnRemoteParent" Style="{StaticResource ModernToolbarButtonStyle}" Padding="8,4" Click="btnRemoteParent_Click" IsEnabled="False" ToolTip="Üst Klasör">
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE752;" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </Button>
+                            <Button x:Name="btnRemoteRefresh" Style="{StaticResource ModernToolbarButtonStyle}" Padding="8,4" Click="btnRemoteRefresh_Click" IsEnabled="False" ToolTip="Yenile">
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE149;" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </Button>
+                            <Button x:Name="btnRemoteMkdir" Style="{StaticResource ModernToolbarButtonStyle}" Padding="8,4" Click="btnRemoteMkdir_Click" IsEnabled="False" ToolTip="Yeni Klasör">
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8F4;" FontSize="14" Foreground="#00C896" FontWeight="Bold"/>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+                <Grid Grid.Row="1" Margin="6,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="150"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" x:Name="txtRemotePath" Text="/" Style="{StaticResource PathBoxStyle}" KeyDown="txtRemotePath_KeyDown" IsEnabled="False"/>
+                    <Button Grid.Column="1" Content="Git" Margin="4,0,6,0" Style="{StaticResource ModernToolbarButtonStyle}" Padding="10,2" Click="btnRemoteGo_Click" x:Name="btnRemoteGo" IsEnabled="False"/>
+                    <TextBox Grid.Column="2" x:Name="txtRemoteSearch" Style="{StaticResource PathBoxStyle}" TextChanged="txtRemoteSearch_TextChanged" IsEnabled="False" ToolTip="Uzak dosyalarda ara..."/>
+                </Grid>
+                <DataGrid Grid.Row="2" x:Name="dgRemoteFiles" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" MouseDoubleClick="dgRemoteFiles_MouseDoubleClick" KeyDown="dgRemoteFiles_KeyDown" PreviewKeyDown="dgRemoteFiles_PreviewKeyDown" Drop="dgRemoteFiles_Drop" AllowDrop="True" DragOver="dgRemoteFiles_DragOver">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Web Adresini Kopyala" x:Name="ctxCopyUrl" Click="ctxCopyUrl_Click" FontWeight="SemiBold"/>
+                            <MenuItem Header="Düzenle (Live Edit)" x:Name="ctxRemoteEdit" Click="ctxRemoteEdit_Click" FontWeight="SemiBold"/>
+                            <Separator/>
+                            <MenuItem Header="İndir" x:Name="ctxDownload" Click="ctxDownload_Click" FontWeight="SemiBold"/>
+                            <Separator/>
+                            <MenuItem Header="Yeniden Adlandır" x:Name="ctxRename" Click="ctxRename_Click"/>
+                            <MenuItem Header="Sil" x:Name="ctxDelete" Click="ctxDelete_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Yeni Klasör" Click="btnRemoteMkdir_Click"/>
+                            <Separator/>
+                            <MenuItem Header="İzinleri Değiştir (CHMOD)" x:Name="ctxRemoteProps" Click="ctxRemoteProps_Click"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Ad" Width="*" SortMemberPath="Name">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding IconText}" Margin="2,0,5,0" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextSecBrush}"/>
+                                        <TextBlock Text="{Binding Name}" Margin="4,0" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Boyut" Binding="{Binding SizeDisplay}" Width="80">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Left"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecBrush}"/>
+                                    <Setter Property="Margin" Value="5,0,0,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Tur" Binding="{Binding TypeDisplay}" Width="90"/>
+                        <DataGridTextColumn Header="Tarih" Binding="{Binding LastModifiedDisplay}" Width="120"/>
+                        <DataGridTextColumn Header="Izinler" Binding="{Binding Permissions}" Width="80">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                    <Setter Property="FontFamily" Value="Consolas"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Sahip" Binding="{Binding Owner}" Width="70"/>
+                    </DataGrid.Columns>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ComparisonStatus}" Value="Missing">
+                                    <Setter Property="Background" Value="#44FF0000"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ComparisonStatus}" Value="Different">
+                                    <Setter Property="Background" Value="#44FFFF00"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                </DataGrid>
+                <Border Grid.Row="3" Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,4">
+                    <TextBlock x:Name="lblRemoteInfo" Text="Bagli Degil" Foreground="{DynamicResource TextSecBrush}" FontSize="10"/>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <GridSplitter Grid.Row="6" x:Name="splitTransfer" Height="5" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}"/>
+
+        <Grid Grid.Row="7" x:Name="gridTransfer" Background="{DynamicResource BgPrimaryBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,3">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Transfer Kuyrugu" FontWeight="SemiBold" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="6,0,15,0"/>
+
+                        <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="6,2" Margin="2,0" Click="btnPauseSelected_Click" ToolTip="Seçili Transferi Duraklat">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⏸" Margin="0,0,4,0" Foreground="#FFB347"/>
+                                <TextBlock Text="Duraklat" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="6,2" Margin="2,0" Click="btnPauseAll_Click" ToolTip="Tüm Transferleri Duraklat">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⏸" Margin="0,0,4,0" Foreground="#FFB347"/>
+                                <TextBlock Text="Tümünü Duraklat" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="6,2" Margin="2,0" Click="btnResumeSelected_Click" ToolTip="Seçili Transferi Devam Ettir">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="▶" Margin="0,0,4,0" Foreground="#00C896"/>
+                                <TextBlock Text="Devam Et" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="6,2" Margin="2,0" Click="btnResumeAll_Click" ToolTip="Tüm Transferleri Devam Ettir">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="▶" Margin="0,0,4,0" Foreground="#00C896"/>
+                                <TextBlock Text="Tümünü Devam Et" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Separator Width="1" Height="16" Background="{DynamicResource BorderBrush}" Margin="5,0"/>
+
+                        <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="6,2" Margin="2,0" Click="btnCancelSelected_Click" ToolTip="Seçili Transferi İptal Et">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🛑" Margin="0,0,4,0" Foreground="{DynamicResource ErrorBrush}"/>
+                                <TextBlock Text="İptal" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="6,2" Margin="2,0" Click="btnCancelAll_Click" ToolTip="Tüm Transferleri İptal Et">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🚫" Margin="0,0,4,0" Foreground="{DynamicResource ErrorBrush}"/>
+                                <TextBlock Text="Tümünü İptal" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource ModernToolbarButtonStyle}" Padding="6,2" Margin="2,0" Click="btnClearCompleted_Click" ToolTip="Bitenleri Listeden Sil">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🧹" Margin="0,0,4,0" Foreground="{DynamicResource TextSecBrush}"/>
+                                <TextBlock Text="Temizle" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+
+                        <CheckBox x:Name="chkTransferAutoScroll" IsChecked="True" VerticalAlignment="Center" Margin="10,0,15,0" Foreground="{DynamicResource TextSecBrush}" FontSize="11">
+                            Oto Kaydır
+                        </CheckBox>
+
+                        <Separator Width="1" Height="16" Background="{DynamicResource BorderBrush}" Margin="0,0,10,0"/>
+
+                        <TextBlock Text="Hız Limiti:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="11" Foreground="{DynamicResource TextSecBrush}"/>
+                        <ComboBox x:Name="cmbSpeedLimit" Width="90" Height="22" FontSize="11"
+                                  Style="{StaticResource ThemeAwareComboBoxStyle}" 
+                                  SelectedIndex="0" 
+                                  SelectionChanged="cmbSpeedLimit_SelectionChanged">
+                            <ComboBoxItem Content="Sınırsız"/>
+                            <ComboBoxItem Content="100 KB/s"/>
+                            <ComboBoxItem Content="500 KB/s"/>
+                            <ComboBoxItem Content="1 MB/s"/>
+                            <ComboBoxItem Content="5 MB/s"/>
+                        </ComboBox>
+
+                        <TextBlock Text="Eşzamanlı:" VerticalAlignment="Center" Margin="15,0,5,0" FontSize="11" Foreground="{DynamicResource TextSecBrush}"/>
+                        <ComboBox x:Name="cmbConcurrentLimit" Width="50" Height="22" FontSize="11" Margin="0,0,5,0"
+                                  Style="{StaticResource ThemeAwareComboBoxStyle}" 
+                                  SelectedIndex="1">
+                            <ComboBoxItem Content="1"/>
+                            <ComboBoxItem Content="2"/>
+                            <ComboBoxItem Content="5"/>
+                            <ComboBoxItem Content="10"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                </Grid>
+            </Border>
+
+            <DataGrid Grid.Row="1" x:Name="dgTransfers" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectionMode="Extended">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Dosya" Binding="{Binding FileName}" Width="200"/>
+                    <DataGridTextColumn Header="Boyut" Binding="{Binding SizeDisplay}" Width="70">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Ilerleme" Width="150">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <ProgressBar Value="{Binding Progress}" Maximum="100" Style="{StaticResource TransferProgressStyle}" Margin="0,4,0,2"
+                                                 Visibility="{Binding Status, Converter={StaticResource ActiveToVis}}"/>
+                                    <TextBlock Text="{Binding StatusDisplay}" FontSize="10" HorizontalAlignment="Center"
+                                               Foreground="{Binding StatusColor, Converter={StaticResource StringToBrush}}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Hiz" Binding="{Binding SpeedDisplay}" Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="ETA" Binding="{Binding EtaDisplay}" Width="70"/>
+                    <DataGridTextColumn Header="Yerel Yol" Binding="{Binding LocalPath}" Width="*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                <Setter Property="FontFamily" Value="Consolas"/>
+                                <Setter Property="FontSize" Value="10"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <Border Grid.Row="8" Background="{DynamicResource BgDeepBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="lblStatus" Text="Hazir" Foreground="{DynamicResource TextSecBrush}" FontSize="11" VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Column="1" x:Name="lblQueueStats" Text="0 aktif 0 kuyruk 0 tamam" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AccentDarkBrush}" FontWeight="SemiBold" Margin="0,0,15,0"/>
+
+                <TextBlock Grid.Column="2" Text="|" Foreground="{DynamicResource BorderBrush}" Margin="0,0,15,0" VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Column="3" Text="FTP Client Pro v1.0  |  .NET 4.8" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>
