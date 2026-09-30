@@ -1,0 +1,72 @@
+<Window x:Class="FTPClient.SiteManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Site Yöneticisi" Height="600" Width="800"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E" Foreground="#E0E0E0">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Site Listesi -->
+        <StackPanel Grid.Column="0" Margin="10">
+            <TextBlock Text="Kaydedilmiş Siteler" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+            <ListBox x:Name="lstSites" Height="400" Background="#2D2D2D" Foreground="#E0E0E0"/>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Height="40">
+                <Button x:Name="btnNew" Content="Yeni" Width="60" Margin="0,0,5,0" Background="#007ACC" Foreground="White"/>
+                <Button x:Name="btnEdit" Content="Düzenle" Width="60" Margin="0,0,5,0" Background="#007ACC" Foreground="White"/>
+                <Button x:Name="btnDelete" Content="Sil" Width="60" Background="#DC3545" Foreground="White"/>
+            </StackPanel>
+        </StackPanel>
+        
+        <!-- Site Detayları -->
+        <StackPanel Grid.Column="1" Margin="10">
+            <TextBlock Text="Site Detayları" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Ad:" VerticalAlignment="Center"/>
+                <TextBox x:Name="txtName" Grid.Row="0" Grid.Column="1" Margin="10,0,0,10" Padding="5" Background="#2D2D2D" Foreground="#E0E0E0" Height="30"/>
+                
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Host:" VerticalAlignment="Center"/>
+                <TextBox x:Name="txtHost" Grid.Row="1" Grid.Column="1" Margin="10,0,0,10" Padding="5" Background="#2D2D2D" Foreground="#E0E0E0" Height="30"/>
+                
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Port:" VerticalAlignment="Center"/>
+                <TextBox x:Name="txtPort" Grid.Row="2" Grid.Column="1" Margin="10,0,0,10" Padding="5" Background="#2D2D2D" Foreground="#E0E0E0" Height="30"/>
+                
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Protokol:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="cmbProtocol" Grid.Row="3" Grid.Column="1" Margin="10,0,0,10" Height="30" Background="#2D2D2D" Foreground="#E0E0E0"/>
+                
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Kullanıcı:" VerticalAlignment="Center"/>
+                <TextBox x:Name="txtUsername" Grid.Row="4" Grid.Column="1" Margin="10,0,0,10" Padding="5" Background="#2D2D2D" Foreground="#E0E0E0" Height="30"/>
+                
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Şifre:" VerticalAlignment="Center"/>
+                <PasswordBox x:Name="pbPassword" Grid.Row="5" Grid.Column="1" Margin="10,0,0,10" Padding="5" Background="#2D2D2D" Foreground="#E0E0E0" Height="30"/>
+                
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="Notlar:" VerticalAlignment="Top"/>
+                <TextBox x:Name="txtComments" Grid.Row="6" Grid.Column="1" Margin="10,0,0,10" Padding="5" Background="#2D2D2D" Foreground="#E0E0E0" Height="80" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+            </Grid>
+            
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Height="40">
+                <Button x:Name="btnConnect" Content="Bağlan" Width="100" Margin="0,0,10,0" Background="#28A745" Foreground="White"/>
+                <Button x:Name="btnSave" Content="Kaydet" Width="100" Margin="0,0,10,0" Background="#007ACC" Foreground="White"/>
+                <Button x:Name="btnCancel" Content="İptal" Width="100" Background="#6C757D" Foreground="White"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
