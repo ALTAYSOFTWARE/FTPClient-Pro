@@ -1,0 +1,17 @@
+<Window x:Class="FTPClient.InputBoxWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Giriş" Height="150" Width="400"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E" Foreground="#E0E0E0"
+        ShowInTaskbar="False"
+        WindowStyle="ToolWindow">
+    <StackPanel Margin="20" VerticalAlignment="Center">
+        <TextBlock x:Name="lblPrompt" FontSize="12" Margin="0,0,0,10"/>
+        <TextBox x:Name="txtInput" Height="35" Padding="10" Background="#2D2D2D" Foreground="#E0E0E0" FontSize="12"/>
+        <StackPanel Orientation="Horizontal" Margin="0,15,0,0" Height="35">
+            <Button x:Name="btnOK" Content="Tamam" Width="100" Margin="0,0,10,0" Background="#28A745" Foreground="White"/>
+            <Button x:Name="btnCancel" Content="İptal" Width="100" Background="#DC3545" Foreground="White"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
