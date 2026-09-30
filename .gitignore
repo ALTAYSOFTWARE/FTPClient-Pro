@@ -1,6 +1,12 @@
-﻿[Bb]in/
-[Oo]bj/
+.gitignore
+bin/
+obj/
 .vs/
-packages/
 *.user
 *.suo
+*.sln.docstates
+*.sln.iml
+packages/
+*.lock.json
+.DS_Store
+Thumbs.db
