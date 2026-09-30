@@ -14,7 +14,7 @@ Public Enum FtpProtocol
     FTP = 0
     FTPS_Implicit = 1
     FTPES_Explicit = 2
-    SFTP = 3 ' <--- BUNA İHTİYACIMIZ VAR
+    SFTP = 3
 End Enum
 
 Public Enum TransferDirection
@@ -41,8 +41,6 @@ Public Enum LogLevel
     Response
 End Enum
 
-
-
 <DataContract>
 Public Class FtpSite
     <DataMember> Public Property Name As String = "Yeni Site"
@@ -57,8 +55,6 @@ Public Class FtpSite
     <DataMember> Public Property Protocol As Integer = 0
     <DataMember> Public Property Comments As String = ""
     <DataMember> Public Property LastConnected As DateTime? = Nothing
-
-    ' YENİ EKLENEN: FtpEngine'in beklediği mülk
     <DataMember> Public Property TimeoutSeconds As Integer = 30
 
     Public ReadOnly Property LastConnectedDisplay As String
@@ -84,12 +80,11 @@ Public Class FtpSite
             .KeepAlive = Me.KeepAlive,
             .Protocol = Me.Protocol,
             .Comments = Me.Comments,
-            .TimeoutSeconds = Me.TimeoutSeconds ' Kopya alırken bunu da unutmayalım
+            .TimeoutSeconds = Me.TimeoutSeconds
         }
     End Function
 End Class
 
-' ===== FTP FILE ITEM =====
 Public Class FtpFileItem
     Public Property Name As String = ""
     Public Property FullPath As String = ""
@@ -99,8 +94,8 @@ Public Class FtpFileItem
     Public Property Permissions As String = ""
     Public Property Owner As String = ""
     Public Property IsSymlink As Boolean = False
-    ' Karşılaştırma durumunu tutar: "Normal", "Missing", "Different"
     Public Property ComparisonStatus As String = "Normal"
+    
     Public ReadOnly Property SizeDisplay As String
         Get
             If IsDirectory Then Return ""
@@ -165,7 +160,6 @@ Public Class FtpFileItem
     End Function
 End Class
 
-' ===== LOCAL FILE ITEM =====
 Public Class LocalFileItem
     Public Property Name As String = ""
     Public Property FullPath As String = ""
@@ -173,8 +167,8 @@ Public Class LocalFileItem
     Public Property LastModified As DateTime = DateTime.MinValue
     Public Property IsDirectory As Boolean = False
     Public Property Extension As String = ""
-    ' Karşılaştırma durumunu tutar: "Normal", "Missing", "Different"
     Public Property ComparisonStatus As String = "Normal"
+    
     Public ReadOnly Property SizeDisplay As String
         Get
             If IsDirectory Then Return ""
@@ -224,7 +218,6 @@ Public Class LocalFileItem
     End Function
 End Class
 
-' ===== TRANSFER ITEM =====
 Public Class TransferItem
     Implements INotifyPropertyChanged
 
@@ -384,7 +377,6 @@ Public Class TransferItem
     End Sub
 End Class
 
-' ===== LOG ENTRY =====
 Public Class LogEntry
     Public Property Time As DateTime = DateTime.Now
     Public Property Message As String = ""
@@ -423,20 +415,15 @@ Public Class LogEntry
     End Property
 End Class
 
-' ===== SITE STORE =====
-
-
 Public Class SiteStore
     Private ReadOnly _configPath As String
     Private ReadOnly _dirPath As String
 
     Public Sub New()
-        ' Uygulama verileri klasörünü belirle
         _dirPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "FTPClientPro")
 
-        ' KLASÖR YOKSA OLUŞTUR
         If Not Directory.Exists(_dirPath) Then
             Directory.CreateDirectory(_dirPath)
         End If
@@ -446,13 +433,11 @@ Public Class SiteStore
 
     Public Function LoadSites() As List(Of FtpSite)
         Try
-            ' DOSYA YOKSA BOŞ LİSTE DÖN (Hata verme)
             If Not File.Exists(_configPath) Then
                 Return New List(Of FtpSite)()
             End If
 
             Dim json As String = File.ReadAllText(_configPath)
-            ' Eğer dosya varsa ama içi boşsa hata almamak için kontrol
             If String.IsNullOrWhiteSpace(json) Then Return New List(Of FtpSite)()
 
             Dim ser As New DataContractJsonSerializer(GetType(List(Of FtpSite)))
@@ -460,7 +445,6 @@ Public Class SiteStore
                 Return DirectCast(ser.ReadObject(ms), List(Of FtpSite))
             End Using
         Catch ex As Exception
-            ' Hata olursa debug konsoluna yaz ama programı çökertme
             Debug.WriteLine("Yükleme Hatası: " & ex.Message)
             Return New List(Of FtpSite)()
         End Try
@@ -468,7 +452,6 @@ Public Class SiteStore
 
     Public Sub SaveSites(sites As List(Of FtpSite))
         Try
-            ' Liste null ise işlem yapma
             If sites Is Nothing Then Return
 
             Dim ser As New DataContractJsonSerializer(GetType(List(Of FtpSite)))
@@ -477,14 +460,17 @@ Public Class SiteStore
                 Dim jsonBytes As Byte() = ms.ToArray()
                 Dim jsonString As String = Encoding.UTF8.GetString(jsonBytes)
 
-                ' DOSYAYI OLUŞTUR VE ÜZERİNE YAZ
                 File.WriteAllText(_configPath, jsonString, Encoding.UTF8)
                 Debug.WriteLine("Kaydedilen Konum: " & _configPath)
             End Using
         Catch ex As Exception
             Debug.WriteLine("Kaydetme Hatası: " & ex.Message)
-            ' Kullanıcıya yetki hatası vb. bildirmek istersen:
-            ' MessageBox.Show("Ayarlar kaydedilemedi: " & ex.Message)
         End Try
     End Sub
+End Class
+
+Public Class DriveInfoItem
+    Public Property Icon As String
+    Public Property DisplayName As String
+    Public Property Path As String
 End Class
