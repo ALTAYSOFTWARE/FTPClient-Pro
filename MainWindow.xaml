@@ -13,14 +13,17 @@
         
         <!-- Toolbar -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#252526" Padding="10" Height="50">
-            <Button Content="Site Yönet" Width="100" Background="#007ACC" Foreground="White" Margin="0,0,5,0"/>
-            <Button Content="Bağlan" Width="100" Background="#28A745" Foreground="White" Margin="0,0,5,0"/>
-            <Button Content="Kesildi" Width="100" Background="#DC3545" Foreground="White" Margin="0,0,5,0"/>
+            <Button x:Name="btnConnect" Content="Bağlan" Width="100" Background="#28A745" Foreground="White" Margin="0,0,5,0" Click="btnConnect_Click"/>
+            <Button x:Name="btnDisconnect" Content="Kesildi" Width="100" Background="#DC3545" Foreground="White" Margin="0,0,5,0" Click="btnDisconnect_Click" IsEnabled="False"/>
             <Separator Width="1" Background="#444" Margin="10,0"/>
             <TextBlock Text="Host:" VerticalAlignment="Center" Margin="10,0,5,0"/>
             <TextBox x:Name="txtHost" Width="150" Height="30" Background="#2D2D2D" Foreground="#E0E0E0" Padding="5"/>
             <TextBlock Text="Port:" VerticalAlignment="Center" Margin="10,0,5,0"/>
             <TextBox x:Name="txtPort" Width="80" Height="30" Background="#2D2D2D" Foreground="#E0E0E0" Padding="5" Text="21"/>
+            <TextBlock Text="Kullanıcı:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+            <TextBox x:Name="txtUsername" Width="120" Height="30" Background="#2D2D2D" Foreground="#E0E0E0" Padding="5"/>
+            <TextBlock Text="Şifre:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+            <PasswordBox x:Name="pbPassword" Width="120" Height="30" Background="#2D2D2D" Foreground="#E0E0E0" Padding="5" Margin="0,0,10,0"/>
         </StackPanel>
         
         <!-- Main Content -->
@@ -34,29 +37,43 @@
             <!-- Local Files -->
             <StackPanel Grid.Column="0" Margin="10">
                 <TextBlock Text="Yerel Dosyalar" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                <ListBox x:Name="lstLocalFiles" Background="#2D2D2D" Foreground="#E0E0E0" Height="550"/>
+                <TextBlock x:Name="lblLocalPath" Text="Yol" FontSize="12" Foreground="#999" Margin="0,0,0,5"/>
+                <ListBox x:Name="lstLocalFiles" Background="#2D2D2D" Foreground="#E0E0E0" Height="500" MouseDoubleClick="lstLocalFiles_MouseDoubleClick"/>
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Height="40">
-                    <Button Content="Yükle" Width="100" Background="#007ACC" Foreground="White"/>
-                    <Button Content="Sil" Width="100" Background="#DC3545" Foreground="White" Margin="5,0,0,0"/>
+                    <Button x:Name="btnUpload" Content="Yükle" Width="100" Background="#007ACC" Foreground="White" Click="btnUpload_Click"/>
+                    <Button x:Name="btnLocalDelete" Content="Sil" Width="100" Background="#DC3545" Foreground="White" Margin="5,0,0,0" Click="btnLocalDelete_Click"/>
+                    <Button x:Name="btnRefreshLocal" Content="Yenile" Width="100" Background="#6C757D" Foreground="White" Margin="5,0,0,0" Click="btnRefreshLocal_Click"/>
                 </StackPanel>
             </StackPanel>
             
             <!-- Remote Files -->
             <StackPanel Grid.Column="1" Margin="10">
                 <TextBlock Text="Uzak Dosyalar" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                <ListBox x:Name="lstRemoteFiles" Background="#2D2D2D" Foreground="#E0E0E0" Height="550"/>
+                <TextBlock x:Name="lblRemotePath" Text="Yol: /" FontSize="12" Foreground="#999" Margin="0,0,0,5"/>
+                <ListBox x:Name="lstRemoteFiles" Background="#2D2D2D" Foreground="#E0E0E0" Height="500" MouseDoubleClick="lstRemoteFiles_MouseDoubleClick"/>
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Height="40">
-                    <Button Content="İndir" Width="100" Background="#007ACC" Foreground="White"/>
-                    <Button Content="Sil" Width="100" Background="#DC3545" Foreground="White" Margin="5,0,0,0"/>
+                    <Button x:Name="btnDownload" Content="İndir" Width="100" Background="#007ACC" Foreground="White" Click="btnDownload_Click" IsEnabled="False"/>
+                    <Button x:Name="btnRemoteDelete" Content="Sil" Width="100" Background="#DC3545" Foreground="White" Margin="5,0,0,0" Click="btnRemoteDelete_Click" IsEnabled="False"/>
+                    <Button x:Name="btnRefreshRemote" Content="Yenile" Width="100" Background="#6C757D" Foreground="White" Margin="5,0,0,0" Click="btnRefreshRemote_Click" IsEnabled="False"/>
                 </StackPanel>
             </StackPanel>
             
             <!-- Transfers & Log -->
             <StackPanel Grid.Column="2" Margin="10">
-                <TextBlock Text="Aktif Transferler" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                <ListBox x:Name="lstTransfers" Background="#2D2D2D" Foreground="#E0E0E0" Height="250"/>
-                <TextBlock Text="Log" FontSize="14" FontWeight="Bold" Margin="0,10,0,10"/>
-                <ListBox x:Name="lstLog" Background="#2D2D2D" Foreground="#E0E0E0" Height="280"/>
+                <TextBlock Text="Aktif Transferler" FontSize="12" FontWeight="Bold" Margin="0,0,0,10"/>
+                <ListBox x:Name="lstTransfers" Background="#2D2D2D" Foreground="#E0E0E0" Height="240">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                <ProgressBar Height="8" Value="{Binding Progress}" Background="#444" Foreground="#28A745" Margin="0,3,0,3"/>
+                                <TextBlock Text="{Binding StatusText}" FontSize="11"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="Log" FontSize="12" FontWeight="Bold" Margin="0,10,0,10"/>
+                <ListBox x:Name="lstLog" Background="#2D2D2D" Foreground="#E0E0E0" Height="280" FontSize="10"/>
             </StackPanel>
         </Grid>
         
